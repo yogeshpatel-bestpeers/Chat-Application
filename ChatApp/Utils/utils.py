@@ -28,18 +28,27 @@ class ConnectionManager:
     
     async def send_private_message(self, sender: str, recipient: str, message: str):
         recipient_ws = self.active_connections.get(recipient)
+        sender_ws = self.active_connections.get(sender)
+
         if recipient_ws:
-            # await recipient_ws.send_t ext(f"{recipient}: {message}")
             await recipient_ws.send_json({
-                "type":"chat","user":sender,"message":message})
-        
-        else:
-            sender_ws = self.active_connections.get(sender)
-            if sender_ws:
-                await sender_ws.send_json({
-                        "type": "system",
-                        "message": f"User '{recipient}' is not online."
-                    })
+                "type": "chat",
+                "user": sender, 
+                "message": message
+            })
+
+        if sender_ws:
+            await sender_ws.send_json({
+                "type": "chat",
+                "user": sender,
+                "message": message
+            })
+
+        if not recipient_ws and sender_ws:
+            await sender_ws.send_json({
+                "type": "system",
+                "message": f"User '{recipient}' is not online."
+            })
 
 
 
