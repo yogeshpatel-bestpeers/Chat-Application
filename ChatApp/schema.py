@@ -10,12 +10,12 @@ class UserGet(BaseModel):
         orm_mode = True
 
 
-class ChatMessageSchema(BaseModel):
+# class ChatMessageSchema(BaseModel):
 
-    content: str
-    timestamp: datetime
-    sender_id: int
-    receiver_id: int
+#     content: str
+#     timestamp: datetime
+#     sender_id: str
+#     receiver_id: str
 
-    class Config:
-        orm_mode = True
+#     class Config:
+#         orm_mode = True

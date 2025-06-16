@@ -5,10 +5,10 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from sqlalchemy.orm import joinedload
 from ChatApp.Database.db import get_db
 from ChatApp.models import ChatMessage, User
-from ChatApp.schema import ChatMessageSchema, UserGet
+from ChatApp.schema import  UserGet
 from ChatApp.Utils.utils import ConnectionManager
 
 template = Jinja2Templates(directory="ChatApp/templates")
@@ -33,10 +33,11 @@ async def websocket_endpoint(
     username: str, websocket: WebSocket, db: AsyncSession = Depends(get_db)
 ):
     await manager.connect(websocket, username)
-    # user1 = User(username="ved", email="ved@example.com", passwords="")
-    # user2 = User(username="alice", email="alice@example.com", passwords="")
+    # user1 = User(username="dev", email="ved@example.com", passwords="")
+    # user2 = User(username="lockey", email="alice@example.com", passwords="")
 
     # db.add_all([user1, user2])
+
     # await db.commit()
 
     # Get sender user
@@ -51,7 +52,7 @@ async def websocket_endpoint(
     try:
         while True:
             data = await websocket.receive_text()
-            print("data Recived : ", data)
+    
 
             if ":" not in data:
                 await websocket.send_text("Invalid format. Use 'recipient: message'")
@@ -86,25 +87,44 @@ async def websocket_endpoint(
         await manager.disconnect(websocket, username)
 
 
-@route.get("/chat/history/{user1}/{user2}", response_model=List[ChatMessageSchema])
+@route.get("/chat/history/{user1}/{user2}")
 async def get_chat_history(user1: str, user2: str, db: AsyncSession = Depends(get_db)):
     # Get user1 and user2
+    user1 = user1.strip()
+    user2 = user2.strip()
+    print("----------------------debug :",user1)
+    # test = await db.execute(select(User.username).where(User.username == user1))
     res1 = await db.execute(select(User).where(User.username == user1))
     res2 = await db.execute(select(User).where(User.username == user2))
-    u1 = res1.scalar_one_or_none()
-    u2 = res2.scalar_one_or_none()
+
+
+    u1 = res1.scalar_one()
+    print("---------------------------id is for user1",u1.id)
+    u2 = res2.scalar_one()
 
     if not u1 or not u2:
         return []
 
     result = await db.execute(
         select(ChatMessage)
+        .options(joinedload(ChatMessage.sender))  # Load sender info
         .where(
             or_(
                 (ChatMessage.sender_id == u1.id) & (ChatMessage.receiver_id == u2.id),
                 (ChatMessage.sender_id == u2.id) & (ChatMessage.receiver_id == u1.id),
             )
         )
-        .order_by(ChatMessage.timestamp.asc())
-    )
-    return result.scalars().all()
+            .order_by(ChatMessage.timestamp.asc())
+        )
+
+    messages = result.scalars().all()
+    print("----------------",messages)
+
+    return [
+        {
+            "content": message.content,
+            "timestamp": message.timestamp,
+            "sender": message.sender.username
+        }
+        for message in messages
+    ] 

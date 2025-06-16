@@ -41,6 +41,8 @@
         const ws = new WebSocket(`ws://localhost:8000/ws/${username}`);
         const chatBox = document.getElementById("chatBox");
         const recipientSelect = document.getElementById("userlist");
+        console.log(recipientSelect)
+        recipientSelect.addEventListener("change", loadChatHistory);
 
         ws.onmessage = function(event) {
             try {
@@ -55,10 +57,10 @@
                 console.error("Invalid message format", e);
             }
         };
-        
         function sendMessage() {
             const input = document.getElementById("messageInput");
             const recipient = recipientSelect.value;
+            
 
             if (!recipient) {
                 alert("Please select a recipient.");
@@ -99,6 +101,31 @@
         }
 
         loadUsers();
+
+        async function loadChatHistory() {
+            const recipient = recipientSelect.value;
+            if (!recipient) return;
+            try {
+                const response = await fetch(`http://localhost:8000/chat/history/${username}/${recipient}`);
+
+                if (!response.ok) throw new Error("Failed to fetch chat history");
+
+                const messages = await response.json();
+                console.log(messages)
+
+                chatBox.value = ""; 
+
+                messages.forEach(msg => {
+                    chatBox.value += `[${msg.sender}]: ${msg.content}\n`;
+                });
+
+            } catch (err) {
+                console.error("Error loading chat history:", err);
+                chatBox.value = "[System]: Failed to load chat history.\n";
+            }
+        }
+        // loadChatHistory()
+
     </script>
 </body>
 </html>
