@@ -1,19 +1,20 @@
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, Request
+from typing import List
+
+from fastapi import APIRouter, Depends, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, or_
-from typing import List
-from uuid import UUID
 
-from ChatApp.models import ChatMessage, User
 from ChatApp.Database.db import get_db
-from ChatApp.Utils.utils import ConnectionManager  
-from ChatApp.schema import UserGet, ChatMessageSchema
+from ChatApp.models import ChatMessage, User
+from ChatApp.schema import ChatMessageSchema, UserGet
+from ChatApp.Utils.utils import ConnectionManager
 
 template = Jinja2Templates(directory="ChatApp/templates")
 route = APIRouter()
 manager = ConnectionManager()
+
 
 @route.get("/{user}", response_class=HTMLResponse)
 async def get(request: Request, user: str):
@@ -26,11 +27,10 @@ async def get_users(db: AsyncSession = Depends(get_db)):
     users = result.scalars().all()
     return [{"username": username} for username in users]
 
+
 @route.websocket("/ws/{username}")
 async def websocket_endpoint(
-    username: str,
-    websocket: WebSocket,
-    db: AsyncSession = Depends(get_db)
+    username: str, websocket: WebSocket, db: AsyncSession = Depends(get_db)
 ):
     await manager.connect(websocket, username)
     # user1 = User(username="ved", email="ved@example.com", passwords="")
@@ -51,7 +51,7 @@ async def websocket_endpoint(
     try:
         while True:
             data = await websocket.receive_text()
-            print('data Recived : ',data)
+            print("data Recived : ", data)
 
             if ":" not in data:
                 await websocket.send_text("Invalid format. Use 'recipient: message'")
@@ -60,7 +60,9 @@ async def websocket_endpoint(
             recipient_username, message = map(str.strip, data.split(":", 1))
 
             # Get recipient user
-            result = await db.execute(select(User).where(User.username == recipient_username))
+            result = await db.execute(
+                select(User).where(User.username == recipient_username)
+            )
             recipient = result.scalar_one_or_none()
 
             if not recipient:
@@ -69,16 +71,16 @@ async def websocket_endpoint(
 
             # Store message in database
             chat_message = ChatMessage(
-                content=message,
-                sender_id=sender.id,
-                receiver_id=recipient.id
+                content=message, sender_id=sender.id, receiver_id=recipient.id
             )
             db.add(chat_message)
             await db.commit()
 
             # Send to both sender and receiver if connected
             formatted_msg = f"{sender.username}: {message}"
-            await manager.send_private_message(sender.username, recipient.username, formatted_msg)
+            await manager.send_private_message(
+                sender.username, recipient.username, formatted_msg
+            )
 
     except WebSocketDisconnect:
         await manager.disconnect(websocket, username)
@@ -100,7 +102,7 @@ async def get_chat_history(user1: str, user2: str, db: AsyncSession = Depends(ge
         .where(
             or_(
                 (ChatMessage.sender_id == u1.id) & (ChatMessage.receiver_id == u2.id),
-                (ChatMessage.sender_id == u2.id) & (ChatMessage.receiver_id == u1.id)
+                (ChatMessage.sender_id == u2.id) & (ChatMessage.receiver_id == u1.id),
             )
         )
         .order_by(ChatMessage.timestamp.asc())

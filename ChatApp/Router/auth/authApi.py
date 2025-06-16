@@ -1,11 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi_utils.cbv import cbv
 from sqlalchemy.ext.asyncio import AsyncSession
 
-
 from ChatApp.Database.db import get_db
-from ChatApp.models import  User
-from fastapi_utils.cbv import cbv
+from ChatApp.models import User
 from ChatApp.Utils.utils import Helper
 
 auth_router = APIRouter(tags=["Auth Api"])
@@ -31,5 +30,3 @@ class AuthView:
         token = self.auth.create_access_token(data={"email": user.email})
 
         return {"access_token": token, "token_type": "bearer"}
-
-

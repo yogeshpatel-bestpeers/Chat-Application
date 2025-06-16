@@ -1,11 +1,14 @@
-from pydantic import BaseModel
 from datetime import datetime
+
+from pydantic import BaseModel
+
 
 class UserGet(BaseModel):
     username: str
 
     class Config:
         orm_mode = True
+
 
 class ChatMessageSchema(BaseModel):
 

@@ -1,11 +1,13 @@
+from datetime import datetime, timedelta, timezone
+
 import jwt
-from fastapi import Depends, HTTPException, Request, status,WebSocket
+from fastapi import Depends, HTTPException, Request, WebSocket, status
 from passlib.context import CryptContext
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from ChatApp.settings.config import get_settings
-from datetime import datetime, timedelta, timezone
+
 from ChatApp.models import User
+from ChatApp.settings.config import get_settings
 
 settings = get_settings()
 
@@ -25,36 +27,25 @@ class ConnectionManager:
     async def broadcast(self, message: str):
         for connection in self.active_connections.values():
             await connection.send_text(message)
-    
+
     async def send_private_message(self, sender: str, recipient: str, message: str):
         recipient_ws = self.active_connections.get(recipient)
         sender_ws = self.active_connections.get(sender)
 
         if recipient_ws:
-            await recipient_ws.send_json({
-                "type": "chat",
-                "user": sender, 
-                "message": message
-            })
+            await recipient_ws.send_json(
+                {"type": "chat", "user": sender, "message": message}
+            )
 
         if sender_ws:
-            await sender_ws.send_json({
-                "type": "chat",
-                "user": sender,
-                "message": message
-            })
+            await sender_ws.send_json(
+                {"type": "chat", "user": sender, "message": message}
+            )
 
         if not recipient_ws and sender_ws:
-            await sender_ws.send_json({
-                "type": "system",
-                "message": f"User '{recipient}' is not online."
-            })
-
-
-
-
-
-
+            await sender_ws.send_json(
+                {"type": "system", "message": f"User '{recipient}' is not online."}
+            )
 
 
 class Helper:
@@ -111,6 +102,3 @@ class Helper:
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Token has expired or Invalid",
             )
-
-
-
