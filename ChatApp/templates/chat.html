@@ -48,8 +48,10 @@
             try {
                 const data = JSON.parse(event.data);
 
-                if (data.type === "chat") 
+                if (data.type === "chat_sender") 
                     chatBox.value += `[${data.user}]: ${data.message}\n`;
+                if (data.type === "chat_reciver") 
+                    chatBox.value += `You : ${data.message}\n`;
                 else if (data.type === "system") 
                     chatBox.value += `[System]: ${data.message}\n`;
                     
@@ -114,10 +116,15 @@
                 console.log(messages)
 
                 chatBox.value = ""; 
-
+                messages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
                 messages.forEach(msg => {
-                    chatBox.value += `[${msg.sender}]: ${msg.content}\n`;
+                    const time = new Date(msg.timestamp).toLocaleTimeString();  // or toLocaleString()
+                    if (msg.sender === username) 
+                        chatBox.value += `${time} - You: ${msg.content}\n`;
+                    else
+                        chatBox.value += `${time} - [${msg.sender}]: ${msg.content}\n`;
                 });
+
 
             } catch (err) {
                 console.error("Error loading chat history:", err);

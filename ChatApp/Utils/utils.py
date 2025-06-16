@@ -34,12 +34,12 @@ class ConnectionManager:
 
         if recipient_ws:
             await recipient_ws.send_json(
-                {"type": "chat", "user": sender, "message": message}
+                {"type": "chat_reciver", "user": sender, "message": message}
             )
 
         if sender_ws:
             await sender_ws.send_json(
-                {"type": "chat", "user": sender, "message": message}
+                {"type": "chat_sender", "user": sender, "message": message}
             )
 
         if not recipient_ws and sender_ws:
